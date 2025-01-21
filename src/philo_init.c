@@ -6,68 +6,62 @@
 /*   By: mcentell <mcentell@student.42malaga.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/01/09 13:15:53 by mcentell          #+#    #+#             */
-/*   Updated: 2025/01/09 16:45:23 by mcentell         ###   ########.fr       */
+/*   Updated: 2025/01/21 19:57:07 by mcentell         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-
 #include "philo.h"
 
-void setup_philosophers(t_philosopher *philosophers, t_simulation *simulation, pthread_mutex_t *forks, char **argv)
+void	assign_mutexes_and_flags(t_philosopher *philosopher,
+		t_simulation *simulation)
 {
-    int i = 0;
-    int num_philosophers = ft_atoi(argv[1]);
-
-    initialize_and_assign_forks(philosophers, forks, num_philosophers);
-
-    while (i < num_philosophers)
-    {
-        t_philosopher *philo = &philosophers[i];
-        initialize_philosopher_state(philo, i + 1);
-        initialize_philosopher_times(philo, argv);
-        assign_mutexes_and_flags(philo, simulation);
-
-        i++;
-    }
+	philosopher->write_lock = &simulation->write_lock;
+	philosopher->dead_lock = &simulation->dead_lock;
+	philosopher->meal_lock = &simulation->meal_lock;
+	philosopher->is_dead = &simulation->dead_flag;
 }
 
-void initialize_and_assign_forks(t_philosopher *philosophers, pthread_mutex_t *forks, int num_philosophers)
+void	initialize_philosopher_times(t_philosopher *philosopher, char **argv)
 {
-    int i = 0;
-    while (i < num_philosophers)
-    {
-        pthread_mutex_init(&forks[i], NULL);
-
-        philosophers[i].left_fork = &forks[i];
-        if (i == 0)
-        {
-            philosophers[i].right_fork = &forks[num_philosophers - 1];
-        }
-        else
-        {
-            philosophers[i].right_fork = &forks[i - 1];
-        }
-
-        i++;
-    }
+	initialize_philosopher_input(philosopher, argv);
+	philosopher->start_time = get_current_time();
+	philosopher->last_meal = get_current_time();
 }
 
-void assign_mutexes_and_flags(t_philosopher *philosopher, t_simulation *simulation)
+void	initialize_philosopher_state(t_philosopher *philosopher, int id)
 {
-    philosopher->write_lock = &simulation->write_lock;
-    philosopher->dead_lock = &simulation->dead_lock;
-    philosopher->meal_lock = &simulation->meal_lock;
-    philosopher->is_dead = &simulation->dead_flag;
+	philosopher->id = id;
+	philosopher->is_eating = 0;
+	philosopher->meals_eaten = 0;
 }
-void initialize_philosopher_times(t_philosopher *philosopher, char **argv)
+
+int	validate_argument_content(char *argument)
 {
-    initialize_philosopher_input(philosopher, argv);
-    philosopher->start_time = get_current_time();
-    philosopher->last_meal = get_current_time();
+	while (*argument)
+	{
+		if (*argument < '0' || *argument > '9')
+			return (1);
+		argument++;
+	}
+	return (0);
 }
-void initialize_philosopher_state(t_philosopher *philosopher, int id)
+
+int	validate_arguments(char **arguments)
 {
-    philosopher->id = id;
-    philosopher->is_eating = 0;
-    philosopher->meals_eaten = 0;
+	if (ft_atoi(arguments[1]) > MAX_PHILOSOPHERS || ft_atoi(arguments[1]) <= 0
+		|| validate_argument_content(arguments[1]) == 1)
+		return (write(2, "Error: Invalid number of philosophers\n", 37), 1);
+	if (ft_atoi(arguments[2]) <= 0
+		|| validate_argument_content(arguments[2]) == 1)
+		return (write(2, "Error: Invalid time to die\n", 27), 1);
+	if (ft_atoi(arguments[3]) <= 0
+		|| validate_argument_content(arguments[3]) == 1)
+		return (write(2, "Error: Invalid time to eat\n", 27), 1);
+	if (ft_atoi(arguments[4]) <= 0
+		|| validate_argument_content(arguments[4]) == 1)
+		return (write(2, "Error: Invalid time to sleep\n", 29), 1);
+	if (arguments[5] && (ft_atoi(arguments[5]) < 0
+			|| validate_argument_content(arguments[5]) == 1))
+		return (write(2, "Error: Invalid number of meals required\n", 40), 1);
+	return (0);
 }
